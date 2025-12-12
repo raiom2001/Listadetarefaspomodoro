@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organize-se</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <style>
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+    .title-font {
+        font-family: 'Playfair Display', serif;
+    }
+    
+    .card {
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .task-item {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+    
+    .task-item:hover {
+        background: #fafafa;
+        border-left-color: #dc2626;
+    }
+    
+    .priority-high { border-left-color: #dc2626; }
+    .priority-medium { border-left-color: #f59e0b; }
+    .priority-low { border-left-color: #10b981; }
+    
+    .calendar-cell {
+        min-height: 90px;
+        transition: all 0.2s ease;
+    }
+    
+    .calendar-cell:hover {
+        background: #f9fafb;
+    }
+    
+    .calendar-cell.today {
+        background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+        border: 2px solid #fca5a5;
+    }
+    
+    .calendar-cell.has-tasks::after {
+        content: '';
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 8px;
+        height: 8px;
+        background: #dc2626;
+        border-radius: 50%;
+    }
+    
+    .timer-circle {
+        transition: stroke-dashoffset 1s linear;
+    }
+    
+   /* Animação de Respiração - COMPACTA */
+.breath-circle {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.4);
+    transition: all ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+
+.breath-circle.inhale {
+    transform: scale(1.4);
+    box-shadow: 0 0 80px rgba(220, 38, 38, 0.6);
+}
+
+.breath-circle.hold {
+    transform: scale(1.4);
+    box-shadow: 0 0 100px rgba(220, 38, 38, 0.8);
+}
+
+.breath-circle.exhale {
+    transform: scale(0.7);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+}
+
+.breath-counter {
+    font-size: 4rem;
+    font-weight: 800;
+    color: white;
+    line-height: 1;
+    z-index: 2;
+}
+
+</style>
+
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#dc2626',
+                        secondary: '#1f2937',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    
+    <!-- Header -->
+    <header class="bg-white border-b sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-check text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold title-font text-gray-900">Organize-se</h1>
+                        <p class="text-xs text-gray-500">Calendário · Tarefas · Foco</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-8">
+                    <div class="text-center">
+                        <div class="text-xl font-bold text-gray-900">{{ stats.total }}</div>
+                        <div class="text-xs text-gray-500">Total</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold text-green-600">{{ stats.completed }}</div>
+                        <div class="text-xs text-gray-500">Concluídas</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-xl font-bold text-red-600">{{ stats.pending }}</div>
+                        <div class="text-xs text-gray-500">Pendentes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        
+        <div class="grid lg:grid-cols-12 gap-6">
+            
+            <!-- Coluna Esquerda -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Timer Pomodoro -->
+                <div class="card rounded-2xl p-6" data-aos="fade-right">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            <i class="fas fa-stopwatch text-red-600 mr-2"></i>Pomodoro
+                        </h2>
+                        <div class="flex gap-2">
+                            <button onclick="openBreathModal()" class="text-sm text-gray-600 hover:text-red-600 transition-colors" title="Exercício de Respiração">
+                                <i class="fas fa-wind"></i>
+                            </button>
+                            <button onclick="requestNotificationPermission()" class="text-sm text-gray-600 hover:text-red-600 transition-colors">
+                                <i class="fas fa-bell"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mb-6">
+                        <div class="relative w-48 h-48 mx-auto mb-4">
+                            <svg class="transform -rotate-90 w-48 h-48">
+                                <circle cx="96" cy="96" r="88" stroke="#f3f4f6" stroke-width="8" fill="none"/>
+                                <circle id="timer-circle" cx="96" cy="96" r="88" stroke="#dc2626" stroke-width="8" fill="none"
+                                    stroke-dasharray="552.92" stroke-dashoffset="0" class="timer-circle" stroke-linecap="round"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="timer-display" class="text-5xl font-bold text-gray-900 mb-1">25:00</span>
+                                <span id="timer-status" class="text-xs text-gray-500">Pronto</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center gap-2 mb-4">
+                            <button onclick="toggleTimer()" id="timer-btn" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-xl font-medium transition-all">
+                                <i class="fas fa-play mr-2"></i>Iniciar
+                            </button>
+                            <button onclick="resetTimer()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-xl transition-all">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex justify-center gap-3 text-sm">
+                            <button onclick="setTimerMode('focus')" class="px-4 py-2 rounded-lg hover:bg-gray-100 transition-all bg-gray-100 font-semibold" id="mode-focus">
+                                <i class="fas fa-brain mr-1 text-red-600"></i>Foco
+                            </button>
+                            <button onclick="setTimerMode('break')" class="px-4 py-2 rounded-lg hover:bg-gray-100 transition-all" id="mode-break">
+                                <i class="fas fa-coffee mr-1"></i>Break
+                            </button>
+                            <button onclick="setTimerMode('long')" class="px-4 py-2 rounded-lg hover:bg-gray-100 transition-all" id="mode-long">
+                                <i class="fas fa-moon mr-1"></i>Longo
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-600">Sessões hoje</span>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-fire text-red-600"></i>
+                                <span id="session-count" class="text-lg font-bold text-gray-900">0</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Ciclo Pomodoro</span>
+                            <span class="text-sm font-medium text-gray-900">
+                                <span id="cycle-progress">0</span>/4
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulário -->
+                <div class="card rounded-2xl p-6 sticky top-24" data-aos="fade-right" data-aos-delay="100">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">
+                        <i class="fas fa-plus text-red-600 mr-2"></i>Nova Tarefa
+                    </h2>
+                    
+                    <form method="POST" action="/add" class="space-y-4">
+                        <div>
+                            <input type="text" name="title" required 
+                                class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all"
+                                placeholder="Título da tarefa...">
+                        </div>
+                        
+                        <div>
+                            <textarea name="description" rows="2" 
+                                class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 transition-all resize-none"
+                                placeholder="Descrição (opcional)"></textarea>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <select name="priority" class="px-4 py-3 border border-gray-200 rounded-lg focus:border-red-600 focus:outline-none transition-all text-sm">
+                                <option value="high">🔴 Alta</option>
+                                <option value="medium" selected>🟡 Média</option>
+                                <option value="low">🟢 Baixa</option>
+                            </select>
+                            
+                            <input type="datetime-local" name="due_date" required 
+                                class="px-4 py-3 border border-gray-200 rounded-lg focus:border-red-600 focus:outline-none transition-all text-sm">
+                        </div>
+                        
+                        <button type="submit" 
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-all">
+                            <i class="fas fa-plus mr-2"></i>Adicionar
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Coluna Direita: Calendário -->
+            <div class="lg:col-span-8" data-aos="fade-left">
+                <div class="card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold title-font text-gray-900" id="calendar-month"></h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="goToToday()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-all">
+                                Hoje
+                            </button>
+                            <button onclick="previousMonth()" class="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                                <i class="fas fa-chevron-left text-gray-600"></i>
+                            </button>
+                            <button onclick="nextMonth()" class="p-2 hover:bg-gray-100 rounded-lg transition-all">
+                                <i class="fas fa-chevron-right text-gray-600"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-7 gap-1 mb-2">
+                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Dom</div>
+                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Seg</div>
+                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Ter</div>
+                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Qua</div>
+                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Qui</div>
+                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Sex</div>
+                        <div class="text-center text-xs font-semibold text-gray-500 py-2">Sáb</div>
+                    </div>
+                    
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
+                    
+                    <div id="selected-day-tasks" class="mt-6 pt-6 border-t hidden">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <i class="fas fa-calendar-day text-red-600"></i>
+                            Tarefas de <span id="selected-day-name"></span>
+                        </h3>
+                        <div id="tasks-container" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+   <!-- Modal de Respiração - COMPACTO -->
+<div id="breath-modal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50" onclick="closeBreathModal(event)">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full mx-4 shadow-2xl" onclick="event.stopPropagation()">
+        <!-- Cabeçalho -->
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xl font-bold title-font text-gray-900">Respiração Guiada</h2>
+            <button onclick="closeBreathModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <p class="text-xs text-gray-600 mb-6">Técnica 4-7-8: Inspire por 4s, segure por 7s, expire por 8s. Repete 4 ciclos.</p>
+        
+        <!-- Container Principal -->
+        <div class="flex flex-col items-center justify-center">
+            
+            <!-- Círculo de Respiração -->
+            <div class="mb-6 flex items-center justify-center" style="min-height: 280px;">
+                <div class="breath-circle" id="breath-circle">
+                    <span class="breath-counter" id="breath-counter"></span>
+                </div>
+            </div>
+            
+            <!-- Instruções -->
+            <div class="text-center mb-6">
+                <p class="text-2xl font-bold text-gray-900 mb-1" id="breath-instruction">Inspire profundamente</p>
+                <p class="text-xs text-gray-600">Ciclo <span id="breath-cycle">1</span> de 4</p>
+            </div>
+            
+            <!-- Botões -->
+            <div class="flex gap-3">
+                <button onclick="startBreathing()" id="breath-start-btn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl font-medium transition-all shadow-lg">
+                    <i class="fas fa-play mr-2"></i>Iniciar
+                </button>
+                <button onclick="stopBreathing()" id="breath-stop-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2.5 rounded-xl font-medium transition-all hidden">
+                    <i class="fas fa-stop mr-2"></i>Parar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 400, once: true });
+    </script>
+
+    <script>
+        const allTasks = [
+            {% for task in tasks %}
+            {
+                id: {{ task[0] }},
+                title: "{{ task[1]|safe }}",
+                description: "{{ task[2]|safe if task[2] else '' }}",
+                due_date: "{{ task[3] }}",
+                priority: "{{ task[4] }}",
+                status: "{{ task[5] }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        // Calendário
+        let currentDate = new Date();
+        
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                               'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            
+            document.getElementById('calendar-month').textContent = `${monthNames[month]} ${year}`;
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-cell bg-gray-50 rounded-lg';
+                grid.appendChild(emptyCell);
+            }
+            
+            const today = new Date();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('div');
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTasks = allTasks.filter(task => task.due_date.startsWith(dateStr));
+                const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+                
+                cell.className = `calendar-cell relative border rounded-lg p-3 cursor-pointer ${isToday ? 'today' : 'border-gray-200'} ${dayTasks.length > 0 ? 'has-tasks' : ''}`;
+                cell.innerHTML = `
+                    <div class="text-sm font-semibold ${isToday ? 'text-red-600' : 'text-gray-900'} mb-1">${day}</div>
+                    ${dayTasks.length > 0 ? `<div class="text-xs text-gray-500">${dayTasks.length} tarefa${dayTasks.length > 1 ? 's' : ''}</div>` : ''}
+                `;
+                cell.onclick = () => showDayTasks(dateStr, day, dayTasks);
+                grid.appendChild(cell);
+            }
+        }
+        
+        function showDayTasks(date, day, tasks) {
+            const container = document.getElementById('selected-day-tasks');
+            const dayName = document.getElementById('selected-day-name');
+            const tasksContainer = document.getElementById('tasks-container');
+            const [year, month] = date.split('-');
+            dayName.textContent = `${day}/${month}/${year}`;
+            
+            if (tasks.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            tasksContainer.innerHTML = tasks.map(task => {
+                const priorityColors = {
+                    high: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-500' },
+                    medium: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-500' },
+                    low: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-500' }
+                };
+                const colors = priorityColors[task.priority];
+                
+                return `
+                    <div class="task-item ${colors.bg} border-l-3 ${colors.border} rounded-lg p-4 ${task.status === 'completed' ? 'opacity-50' : ''}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3 flex-1">
+                                <button onclick="location.href='/toggle/${task.id}'" 
+                                    class="mt-1 w-5 h-5 rounded border-2 flex-shrink-0 ${task.status === 'completed' ? 'bg-green-600 border-green-600' : 'border-gray-300 hover:border-red-600'} transition-all flex items-center justify-center">
+                                    ${task.status === 'completed' ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                                </button>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-semibold text-gray-900 text-sm mb-1 ${task.status === 'completed' ? 'line-through' : ''}">${task.title}</h4>
+                                    ${task.description ? `<p class="text-xs text-gray-600 mb-2">${task.description}</p>` : ''}
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="${colors.text}">
+                                            <i class="fas fa-clock mr-1"></i>${task.due_date.substr(11, 5)}
+                                        </span>
+                                        <span class="px-2 py-0.5 ${colors.bg} ${colors.text} rounded font-medium">
+                                            ${task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="if(confirm('Excluir esta tarefa?')) location.href='/delete/${task.id}'" 
+                                class="text-red-600 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-all">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function previousMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
+        function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+        function goToToday() { currentDate = new Date(); renderCalendar(); }
+        
+        renderCalendar();
+        
+        // Timer Pomodoro com Auto-Switch
+        const circumference = 2 * Math.PI * 88;
+        let timerInterval = null;
+        let timerSeconds = 25 * 60;
+        let timerMode = 'focus';
+        let isRunning = false;
+        let audioContext, notificationsEnabled = false;
+        let pomodoroCount = 0; // Contador de ciclos (4 focos = 1 descanso longo)
+        
+        const timerModes = { focus: 25 * 60, break: 5 * 60, long: 15 * 60 };
+        
+        function setTimerMode(mode) {
+            if (isRunning) return;
+            timerMode = mode;
+            timerSeconds = timerModes[mode];
+            updateTimerDisplay();
+            
+            document.querySelectorAll('[id^="mode-"]').forEach(btn => btn.classList.remove('bg-gray-100', 'font-semibold'));
+            document.getElementById(`mode-${mode}`).classList.add('bg-gray-100', 'font-semibold');
+        }
+        
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timerSeconds / 60);
+            const secs = timerSeconds % 60;
+            const timeString = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            document.getElementById('timer-display').textContent = timeString;
+            
+            const totalSeconds = timerModes[timerMode];
+            const progress = (totalSeconds - timerSeconds) / totalSeconds;
+            const offset = circumference * progress;
+            document.getElementById('timer-circle').style.strokeDashoffset = offset;
+            
+            if (isRunning) {
+                document.title = `${timeString} - Organize-se`;
+                updateFavicon(String(minutes));
+            }
+        }
+        
+        function toggleTimer() {
+            if (isRunning) { pauseTimer(); } else { startTimer(); }
+        }
+        
+        function startTimer() {
+            isRunning = true;
+            document.getElementById('timer-status').textContent = timerMode === 'focus' ? 'Focando...' : 'Descansando...';
+            document.getElementById('timer-btn').innerHTML = '<i class="fas fa-pause mr-2"></i>Pausar';
+            
+            timerInterval = setInterval(() => {
+                if (timerSeconds > 0) {
+                    timerSeconds--;
+                    updateTimerDisplay();
+                } else {
+                    completeTimer();
+                }
+            }, 1000);
+        }
+        
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('timer-status').textContent = 'Pausado';
+            document.getElementById('timer-btn').innerHTML = '<i class="fas fa-play mr-2"></i>Iniciar';
+            document.title = 'Organize-se';
+            resetFavicon();
+        }
+        
+        function resetTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            timerSeconds = timerModes[timerMode];
+            document.getElementById('timer-status').textContent = 'Pronto';
+            document.getElementById('timer-btn').innerHTML = '<i class="fas fa-play mr-2"></i>Iniciar';
+            document.title = 'Organize-se';
+            resetFavicon();
+            updateTimerDisplay();
+        }
+        
+        function completeTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            
+            playAlarm();
+            
+            if (timerMode === 'focus') {
+                // Incrementa contador de sessões
+                let count = parseInt(localStorage.getItem('session_count') || '0');
+                count++;
+                localStorage.setItem('session_count', count);
+                document.getElementById('session-count').textContent = count;
+                
+                // Incrementa ciclo Pomodoro
+                pomodoroCount++;
+                document.getElementById('cycle-progress').textContent = pomodoroCount % 4 || 4;
+                
+                showNotification('Foco Concluído!', 'Parabéns! Hora de descansar.');
+                
+                // Auto-switch: 4 focos = descanso longo, senão descanso curto
+                if (pomodoroCount % 4 === 0) {
+                    setTimeout(() => {
+                        setTimerMode('long');
+                        showNotification('Descanso Longo!', 'Você merece um descanso mais longo. Relaxe!');
+                        startTimer();
+                    }, 3000);
+                } else {
+                    setTimeout(() => {
+                        setTimerMode('break');
+                        startTimer();
+                    }, 3000);
+                }
+            } else {
+                // Descanso concluído, volta para foco
+                showNotification('Descanso Concluído!', 'Pronto para focar novamente?');
+                setTimeout(() => {
+                    setTimerMode('focus');
+                    startTimer();
+                }, 3000);
+            }
+        }
+        
+        function updateFavicon(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32; canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#dc2626'; ctx.beginPath();
+            ctx.arc(16, 16, 16, 0, 2 * Math.PI); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(text, 16, 16);
+            const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+            link.type = 'image/x-icon'; link.rel = 'shortcut icon';
+            link.href = canvas.toDataURL();
+            document.getElementsByTagName('head')[0].appendChild(link);
+        }
+        
+        function resetFavicon() {
+            const link = document.querySelector("link[rel*='icon']");
+            if (link) link.href = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">✓</text></svg>';
+        }
+        
+        function requestNotificationPermission() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        notificationsEnabled = true;
+                        new Notification("Notificações ativadas!", { icon: "https://cdn-icons-png.flaticon.com/512/3176/3176366.png" });
+                    }
+                });
+            }
+        }
+        
+        function playAlarm() {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    oscillator.connect(gainNode); gainNode.connect(audioContext.destination);
+                    oscillator.frequency.value = 800; oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    oscillator.start(audioContext.currentTime); oscillator.stop(audioContext.currentTime + 0.5);
+                }, i * 500);
+            }
+        }
+        
+        function showNotification(title, message) {
+            if (notificationsEnabled && "Notification" in window && Notification.permission === "granted") {
+                new Notification(title, { body: message, icon: "https://cdn-icons-png.flaticon.com/512/3176/3176366.png" });
+            }
+        }
+        
+        document.getElementById('session-count').textContent = localStorage.getItem('session_count') || '0';
+        setTimerMode('focus');
+        
+        // Exercício de Respiração (Técnica 4-7-8)
+        let breathInterval = null;
+        let breathCycle = 1;
+        let breathPhase = 'inhale';
+        
+        function openBreathModal() {
+            document.getElementById('breath-modal').classList.remove('hidden');
+            document.getElementById('breath-modal').classList.add('flex');
+        }
+        
+        function closeBreathModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            stopBreathing();
+            document.getElementById('breath-modal').classList.add('hidden');
+            document.getElementById('breath-modal').classList.remove('flex');
+        }
+        
+        function startBreathing() {
+            document.getElementById('breath-start-btn').classList.add('hidden');
+            document.getElementById('breath-stop-btn').classList.remove('hidden');
+            
+            breathCycle = 1;
+            breathPhase = 'inhale';
+            runBreathCycle();
+        }
+        
+        function runBreathCycle() {
+            const circle = document.getElementById('breath-circle');
+            const instruction = document.getElementById('breath-instruction');
+            const counter = document.getElementById('breath-counter');
+            const cycleDisplay = document.getElementById('breath-cycle');
+            
+            cycleDisplay.textContent = breathCycle;
+            
+            // Fase 1: Inspire (4 segundos)
+            breathPhase = 'inhale';
+            instruction.textContent = 'Inspire profundamente';
+            circle.className = 'breath-circle inhale';
+            circle.style.transitionDuration = '4s';
+            animateCounter(4, counter, () => {
+                
+                // Fase 2: Segure (7 segundos)
+                breathPhase = 'hold';
+                instruction.textContent = 'Segure a respiração';
+                circle.className = 'breath-circle hold';
+                circle.style.transitionDuration = '7s';
+                animateCounter(7, counter, () => {
+                    
+                    // Fase 3: Expire (8 segundos)
+                    breathPhase = 'exhale';
+                    instruction.textContent = 'Expire lentamente';
+                    circle.className = 'breath-circle exhale';
+                    circle.style.transitionDuration = '8s';
+                    animateCounter(8, counter, () => {
+                        
+                        // Próximo ciclo ou fim
+                        if (breathCycle < 4) {
+                            breathCycle++;
+                            setTimeout(() => runBreathCycle(), 1000);
+                        } else {
+                            instruction.textContent = 'Exercício Concluído!';
+                            counter.textContent = '✓';
+                            circle.className = 'breath-circle';
+                            setTimeout(() => {
+                                document.getElementById('breath-start-btn').classList.remove('hidden');
+                                document.getElementById('breath-stop-btn').classList.add('hidden');
+                            }, 2000);
+                        }
+                    });
+                });
+            });
+        }
+        
+        function animateCounter(seconds, element, callback) {
+            let count = seconds;
+            element.textContent = count;
+            
+            breathInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    element.textContent = count;
+                } else {
+                    clearInterval(breathInterval);
+                    callback();
+                }
+            }, 1000);
+        }
+        
+        function stopBreathing() {
+            clearInterval(breathInterval);
+            document.getElementById('breath-circle').className = 'breath-circle';
+            document.getElementById('breath-instruction').textContent = 'Inspire';
+            document.getElementById('breath-counter').textContent = '';
+            document.getElementById('breath-cycle').textContent = '1';
+            document.getElementById('breath-start-btn').classList.remove('hidden');
+            document.getElementById('breath-stop-btn').classList.add('hidden');
+            breathCycle = 1;
+        }
+    </script>
+</body>
+</html>
