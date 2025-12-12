@@ -1,0 +1,17 @@
+# Inicia o app
+pm2 start ecosystem.config.js
+
+# Ver logs
+pm2 logs organize-se
+
+# Parar
+pm2 stop organize-se
+
+# Reiniciar
+pm2 restart organize-se
+
+# Ver status
+pm2 status
+
+# Deletar do PM2
+pm2 delete organize-se
